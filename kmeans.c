@@ -97,6 +97,9 @@ int main(int argc, char **argv) {
  * and performs the kmeans algorithm until convergence
  */
 static double** fit(int K_arg, int dim_arg, int num_data_arg, float eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices) {
+	#undef EPSILON
+	#define EPSILON eps
+
 	int i, j;
 	dim = dim_arg;
 	num_data = num_data_arg;
