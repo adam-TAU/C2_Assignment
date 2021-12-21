@@ -20,7 +20,7 @@ typedef struct {
 static void assert_input(bool condition);
 static void assert_other(bool condition);
 static void collect_data(const char *filename);
-static void initialize_sets(void);
+static void initialize_sets(int*);
 static void get_num_and_dim(FILE *file);
 static void parse_datapoint(FILE *file, dpoint_t *dpoint);
 static void assign_to_closest(dpoint_t dpoint);
@@ -33,6 +33,8 @@ static void parse_args(int argc, char **argv, char **infile, char **outfile,
 static void init_datapoint(dpoint_t *dpoint);
 static void free_datapoint(dpoint_t);
 static void free_program(void);
+static void converge(int max_iter);
+static double** fit(int K_arg, int dim_arg, int num_data_arg, float eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices); /* will most likely have to change that to an extern function */
 
 /*****************************************************************************/
 
@@ -65,7 +67,7 @@ set_t *sets = NULL;
 
 int main(int argc, char **argv) {
     char *infile, *outfile;
-    int i, iter, max_iter, updated_centroids;
+    int i, max_iter;
 
     parse_args(argc, argv, &infile, &outfile, &max_iter);
     printf("K = %i, max_iter = %i, infile = '%s', outfile = '%s'\n", K,
@@ -74,8 +76,58 @@ int main(int argc, char **argv) {
     collect_data(infile);
     printf("dim = %i, N = %i\n", dim, num_data);
 
-    initialize_sets();
+    int* range_0_to_K_minus_1;
+    range_0_to_K_minus_1 = (int*)calloc(K, sizeof(int));
 
+    for (i = 0; i < K; i++) {
+	    range_0_to_K_minus_1[i] = i;
+    }
+
+    initialize_sets(range_0_to_K_minus_1);
+
+    converge(max_iter);
+    write_output(outfile);
+
+    free_program();
+    return 0;
+}
+
+
+/* the fit function. uses its given initialized centroids, datapoints and other cruical data
+ * and performs the kmeans algorithm until convergence
+ */
+static double** fit(int K_arg, int dim_arg, int num_data_arg, float eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices) {
+	int i, j;
+	dim = dim_arg;
+	num_data = num_data_arg;
+	datapoints = calloc(num_data, sizeof(*datapoints));
+	assert_other(NULL != datapoints);
+	
+	for(i = 0; i < num_data; i++) {
+		datapoints[i].data = datapoints_arg[i];
+	}
+	
+	initialize_sets(initial_centroids_indices);
+	converge(max_iter);
+	
+	double** centroids_out;
+	centroids_out = (double**)calloc(K, sizeof(double*));
+
+	for (i = 0; i < K; i++) {
+		centroids_out[i] = sets[i].current_centroid.data
+	}
+	
+	return centroids_out;
+}
+
+
+
+
+/* This function was created to reduce code duplication. It is the engine of the algorithm,
+ * providing the structurization of the clusters until convergence 
+ */
+static void converge(int max_iter) {
+	int iter, i, updated_centroids;
     for(iter = 0; iter < max_iter; iter++) {
         for(i = 0; i < num_data; i++) {
             assign_to_closest(datapoints[i]);
@@ -90,11 +142,10 @@ int main(int argc, char **argv) {
             break;
         }
     }
-    write_output(outfile);
-
-    free_program();
-    return 0;
 }
+
+
+
 
 /* Assigns the given datapoint to the closest set that it can find, using the
  * sqdist function. */
@@ -161,10 +212,14 @@ static void add_to_set(set_t *set, dpoint_t dpoint) {
     }
 }
 
+
+
 /* Initializes all of the sets, both allocating memory for the `sum` and
- * `current_centroid` properties and copying the data from the relevant
- * datapoint. */
-static void initialize_sets() {
+ * `current_centroid` properties and copying the data from a given index list
+ *  that indicates what datapoint we should initialize the current centroid with.
+ *  In the case of a regular kmeans.c run in HW1, we would power this with the plain [0,1,...,K-1] index list.
+ *  Though, with the kmeans++, we will power it with the observation indices list */
+static void initialize_sets(int* indices) {
     int i, j;
 
     sets = calloc(K, sizeof(*sets));
@@ -178,10 +233,12 @@ static void initialize_sets() {
 
         /* Copy initial current_centroid from i-th datapoint */
         for(j = 0; j < dim; j++) {
-            sets[i].current_centroid.data[j] = datapoints[i].data[j];
+            sets[i].current_centroid.data[j] = datapoints[indices[i]].data[j];
         }
     }
 }
+
+
 
 /* Given an input filename, gathers all of the datapoints stored in that file,
  * while also figuring out what `dim` and `num_data` are supposed to be. */

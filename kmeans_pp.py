@@ -1,24 +1,38 @@
 import sys
 from typing import List
 import numpy as np
+import pandas as pd
 import mykmeanssp
 
 
-
-def main(K: int, eps: int, maxiter: int, infile: str, outfile: str) -> None:
-	# reading from the input file
-    datapoints = parse_datapoints(infile)
+def main(K: int, eps: int, maxiter: int, infile1: str, infile2: str) -> None:
+	# reading from the input files
+    df1 = pd.read_csv(infile1, header=None)
+    df2 = pd.read_csv(infile2, header=None)
+    joined_df = pd.concat([df1, df2], axis=1, join="inner")
+    datapoints = joined_df.values.tolist()
 
     # initializing K centroids from the observations
-    initialized_centroids = initialize_centroids(K, datapoints)
+    observation_centroids_indices = initialize_centroids(K, datapoints)
 
     # powering the kmeans.c centroid creation module
-    centroids = mykmeanssp.kmeans.fit(K, eps, max_iter, infile, outfile, initialized_centroids)
+    centroids = mykmeanssp.kmeans.fit(K, len(datapoints[0]), eps, max_iter, datapoints, observation_centroids_indices)
 	
     # output
+    output_string = str()
+    output_string += ",".join(observation_centroids_indices) + "\n"
+    output_string += [",".join(["{:.4f}".format(num) for num in centroid]) + "\n"
+                     for centroid in centroids]
+    
+    # return
+    return output_string
 
 
 def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[float]]:
+    """
+    Given a list of datapoints and an amount of centroids we wish to output 'K',
+    weightedly pick the initial centroids for the kmeans process we'll perform later
+    """
 	np.random.seed(0)
 	centroids = list()
 	centroids[0] = data_point[0]
@@ -27,46 +41,21 @@ def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[flo
 		prev_observation = centroids[i-1]
 		distance_list = [calc_distance(dp, prev_observation) for dp in datapoints]
 		sum_of_distances = sum(distance_list)
-		probability_list = [(dist/sum_of_distances, ind) for ind, dist in enumerate(distance_list)]
-		centroids[i] = datapoints[np.random.choice(probability_list)]
+		probability_list = [dist/sum_of_distances for dist in distance_list]
+        rand_datapoint_ind = np.random.choice(datapoints, p=probability_list)
+		centroids[i] = datapoints[rand_datapoint_ind]
 	
 	return centroids
 
 
 
 def calc_distance(u1: List[float], u2: List[float]) -> float:
+    """
+    Given two same length vectors, calculate the euclidean norm of their distance,
+    and return it as the value
+    """
 	assert(len(u1) == len(u2)
 	return sum([(u1[ind] - u2[ind]) ** 2 for ind in range(len(u1))])
-
-
-
-def parse_datapoints(infile: str) -> List[List[float]]:
-    """
-    Given an input filename, parses the datapoints contained in the file
-    and returns a list of them.
-    """
-    datapoints = list()
-    dim = -1
-
-    try:
-        with open(infile) as file:
-            for line in file.readlines():
-                numbers = line.strip().split(",")
-                if dim == -1:
-                    dim = len(numbers)
-                else:
-                    assert_valid_input(dim == len(numbers))
-
-                try:
-                    lst = [float(number) for number in numbers]
-                    datapoints.append(lst)
-                except ValueError:
-                    assert_valid_input(False)
-
-    except OSError:
-        assert_generic(False)
-
-    return datapoints
 
 
 def assert_valid_input(cond: bool):
