@@ -36,7 +36,7 @@ static void free_program(void);
 static void converge(int max_iter);
 
 /* function declarations for supporting the C API */
-static PyObject* fit_capi(PyObject, PyObject);
+static PyObject* fit_capi(PyObject*, PyObject*);
 static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices); /* will most likely have to change that to an extern function */
 
 
@@ -44,25 +44,25 @@ static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int 
 /************************* configuring the C API ****************************************************/
 
 
-static PyObject* fit_capi(Pyobject *self, PyObject *args) {
+static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	int K_arg, dim_arg, num_data_arg, max_iter;
 	double eps;
-	PyObject* initial_centroids_py;
-	PyObject* datapoints_py;
+	PyObject *initial_centroids_py;
+	PyObject *datapoints_py;
 
-	if(!PyArg_ParseTuple(arg, "iiidiO!O!", &K_arg, &dim_arg, &num_data_arg, &eps, &max_iter, &PyList_Type, &datapoints_py, &PyList_Type, &initial_centroids_py)) {
+	if(!PyArg_ParseTuple(args, "iiidiO!O!", &K_arg, &dim_arg, &num_data_arg, &eps, &max_iter, &PyList_Type, &datapoints_py, &PyList_Type, &initial_centroids_py)) {
 		return NULL;
 	}
 	
 	/* parsing the given lists as arrays */
 	int i, j;
-	PyObject* pypoint, coord;
+	PyObject *pypoint, *coord;
 	double** datapoints_arg;
 	int* initial_centroids_indices;
 
 	/* allocating memory for the new arrays */
 	datapoints_arg = (double**)calloc(num_data_arg, sizeof(double*));
-	for (i = 0; i < num_data; i++) {
+	for (i = 0; i < num_data_arg; i++) {
 		datapoints_arg[i] = (double*)calloc(dim_arg, sizeof(double));
 	}
 	
@@ -90,7 +90,7 @@ static PyObject* fit_capi(Pyobject *self, PyObject *args) {
 	/* casting the list of integers that hold the indices of the observations as centroids */
 	for(i = 0; i < PyList_Size(initial_centroids_py); ++i) {
 		pypoint = PyList_GetItem(initial_centroids_py, i);
-		if (!PyLong_Check(pypoing)) {
+		if (!PyLong_Check(pypoint)) {
 			PyErr_SetString(PyExc_TypeError, "must pass an list of integer");
 			return NULL;
 		}
@@ -98,7 +98,7 @@ static PyObject* fit_capi(Pyobject *self, PyObject *args) {
 	}
 
 	/* powering the fit function */
-	return Py_BuildValue("O", fit(K_arg, dim_arg, num_data_arg, eps, max_iter, datapoints_arg, initial_centroids_indices);
+	return Py_BuildValue("O", fit_c(K_arg, dim_arg, num_data_arg, eps, max_iter, datapoints_arg, initial_centroids_indices));
 }
 
 
@@ -130,7 +130,7 @@ static struct PyModuleDef moduledef = {
 PyMODINIT_FUNC
 PyInit_mykmeanssp(void) {
 	PyObject *m;
-	m = PyModule_Create(&module_def);
+	m = PyModule_Create(&moduledef);
 	if (!m) {
 		return NULL;
 	}
@@ -202,7 +202,7 @@ static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int 
 	#undef EPSILON
 	#define EPSILON eps
 
-	int i, j;
+	int i;
 	dim = dim_arg;
 	num_data = num_data_arg;
 	datapoints = calloc(num_data, sizeof(*datapoints));
@@ -219,7 +219,7 @@ static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int 
 	centroids_out = (double**)calloc(K, sizeof(double*));
 
 	for (i = 0; i < K; i++) {
-		centroids_out[i] = sets[i].current_centroid.data
+		centroids_out[i] = sets[i].current_centroid.data;
 	}
 	
 	return centroids_out;

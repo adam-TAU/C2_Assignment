@@ -7,3 +7,5 @@
 .temp.c.swo
 .temp.c.swp
 test_data/.test.swp
+.kmeans.c.swl
+.kmeans.c.swm
