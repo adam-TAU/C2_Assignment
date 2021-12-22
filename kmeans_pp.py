@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import mykmeanssp
 
-
 def main(K: int, eps: int, maxiter: int, infile1: str, infile2: str) -> None:
 	# reading from the input files
     df1 = pd.read_csv(infile1, header=None)
@@ -16,7 +15,7 @@ def main(K: int, eps: int, maxiter: int, infile1: str, infile2: str) -> None:
     observation_centroids_indices = initialize_centroids(K, datapoints)
 
     # powering the kmeans.c centroid creation module
-    centroids = mykmeanssp.kmeans.fit(K, len(datapoints[0]), eps, max_iter, datapoints, observation_centroids_indices)
+    centroids = mykmeanssp.kmeans.fit(K, len(datapoints[0]), len(datapoints), eps, max_iter, datapoints, observation_centroids_indices)
 	
     # output
     output_string = str()
