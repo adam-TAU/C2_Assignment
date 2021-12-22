@@ -1,7 +1,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <Python.h>
+#define PY_SSIZE_T_CLEAN
 #define EPSILON 0.001
 #define bool int
 #define true 1
@@ -28,13 +29,114 @@ static double sqdist(dpoint_t p1, dpoint_t p2);
 static void add_to_set(set_t *set, dpoint_t dpoint);
 static int update_centroid(set_t *set);
 static void write_output(char *filename);
-static void parse_args(int argc, char **argv, char **infile, char **outfile,
-                       int *max_iter);
+static void parse_args(int argc, char **argv, char **infile, char **outfile, int *max_iter);
 static void init_datapoint(dpoint_t *dpoint);
 static void free_datapoint(dpoint_t);
 static void free_program(void);
 static void converge(int max_iter);
-static double** fit(int K_arg, int dim_arg, int num_data_arg, float eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices); /* will most likely have to change that to an extern function */
+
+/* function declarations for supporting the C API */
+static PyObject* fit_capi(PyObject, PyObject);
+static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices); /* will most likely have to change that to an extern function */
+
+
+
+/************************* configuring the C API ****************************************************/
+
+
+static PyObject* fit_capi(Pyobject *self, PyObject *args) {
+	int K_arg, dim_arg, num_data_arg, max_iter;
+	double eps;
+	PyObject* initial_centroids_py;
+	PyObject* datapoints_py;
+
+	if(!PyArg_ParseTuple(arg, "iiidiO!O!", &K_arg, &dim_arg, &num_data_arg, &eps, &max_iter, &PyList_Type, &datapoints_py, &PyList_Type, &initial_centroids_py)) {
+		return NULL;
+	}
+	
+	/* parsing the given lists as arrays */
+	int i, j;
+	PyObject* pypoint, coord;
+	double** datapoints_arg;
+	int* initial_centroids_indices;
+
+	/* allocating memory for the new arrays */
+	datapoints_arg = (double**)calloc(num_data_arg, sizeof(double*));
+	for (i = 0; i < num_data; i++) {
+		datapoints_arg[i] = (double*)calloc(dim_arg, sizeof(double));
+	}
+	
+	initial_centroids_indices = (int*)calloc(PyList_Size(initial_centroids_py), sizeof(int));
+
+	/* casting the lists of lists of datapoints into the double** datapoints variable array */
+	for (i = 0; i < PyList_Size(datapoints_py); ++i) {
+		pypoint = PyList_GetItem(datapoints_py, i);
+	        if (!PyList_Check(pypoint)) {
+        		PyErr_SetString(PyExc_TypeError, "must pass in list of list");
+            		return NULL;
+       		}
+
+		for(j = 0; j < PyList_Size(pypoint); ++j) {
+			coord = PyList_GetItem(pypoint, j);
+			if (!PyFloat_Check(coord)) {
+				return NULL;
+			}
+			datapoints_arg[i][j] = PyFloat_AsDouble(coord);
+		}
+
+	}
+	
+	
+	/* casting the list of integers that hold the indices of the observations as centroids */
+	for(i = 0; i < PyList_Size(initial_centroids_py); ++i) {
+		pypoint = PyList_GetItem(initial_centroids_py, i);
+		if (!PyLong_Check(pypoing)) {
+			PyErr_SetString(PyExc_TypeError, "must pass an list of integer");
+			return NULL;
+		}
+		initial_centroids_indices[i] = (int) PyLong_AsLong(pypoint);
+	}
+
+	/* powering the fit function */
+	return Py_BuildValue("O", fit(K_arg, dim_arg, num_data_arg, eps, max_iter, datapoints_arg, initial_centroids_indices);
+}
+
+
+
+
+
+static PyMethodDef capiMethods[] = {
+	{"fit",
+		(PyCFunction) fit_capi,
+		METH_VARARGS,
+		PyDoc_STR("A fit method for the kmeans algorithm")
+	},
+	{NULL, NULL, 0, NULL}
+};
+
+
+
+
+static struct PyModuleDef moduledef = {
+	PyModuleDef_HEAD_INIT,
+	"mykmeanssp",
+	NULL,
+	-1,
+	capiMethods
+};
+
+
+
+PyMODINIT_FUNC
+PyInit_mykmeanssp(void) {
+	PyObject *m;
+	m = PyModule_Create(&module_def);
+	if (!m) {
+		return NULL;
+	}
+	return m;
+}
+
 
 /*****************************************************************************/
 
@@ -84,7 +186,7 @@ int main(int argc, char **argv) {
     }
 
     initialize_sets(range_0_to_K_minus_1);
-
+    free(range_0_to_K_minus_1);
     converge(max_iter);
     write_output(outfile);
 
@@ -96,7 +198,7 @@ int main(int argc, char **argv) {
 /* the fit function. uses its given initialized centroids, datapoints and other cruical data
  * and performs the kmeans algorithm until convergence
  */
-static double** fit(int K_arg, int dim_arg, int num_data_arg, float eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices) {
+static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices) {
 	#undef EPSILON
 	#define EPSILON eps
 
@@ -382,3 +484,4 @@ static void write_output(char *filename) {
 
     fclose(file);
 }
+
