@@ -1,8 +1,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <Python.h>
 #define PY_SSIZE_T_CLEAN
+#include <Python.h>
 #define EPSILON 0.001
 #define bool int
 #define true 1
