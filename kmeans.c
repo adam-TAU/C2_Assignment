@@ -48,14 +48,14 @@ static int* listToArray_I(PyObject *list, int length);
 
 static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	int K_arg, dim_arg, num_data_arg, max_iter;
-	double eps;
+	double epsilon;
 	double** centroids_c;
 	PyObject *centroids_py;
 	PyObject *result;
 	PyObject *initial_centroids_py;
 	PyObject *datapoints_py;
 
-	if(!PyArg_ParseTuple(args, "iiidiO!O!", &K_arg, &dim_arg, &num_data_arg, &eps, &max_iter, &PyList_Type, &datapoints_py, &PyList_Type, &initial_centroids_py)) {
+	if(!PyArg_ParseTuple(args, "iiidiO!O!", &K_arg, &dim_arg, &num_data_arg, &epsilon, &max_iter, &PyList_Type, &datapoints_py, &PyList_Type, &initial_centroids_py)) {
 		return NULL;
 	}
 	
@@ -72,7 +72,7 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	initial_centroids_indices = listToArray_I(initial_centroids_py, K_arg);
 
 	/* building the returned centroids' list */
-	centroids_c = fit_c(K_arg, dim_arg, num_data_arg, eps, max_iter, datapoints_arg, initial_centroids_indices);
+	centroids_c = fit_c(K_arg, dim_arg, num_data_arg, epsilon, max_iter, datapoints_arg, initial_centroids_indices);
 	centroids_py = PyList_New(num_data_arg);
 
 	for(i = 0; i < num_data_arg; i++) {
@@ -262,9 +262,9 @@ int main(int argc, char **argv) {
 /* the fit function. uses its given initialized centroids, datapoints and other cruical data
  * and performs the kmeans algorithm until convergence
  */
-static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices) {
+static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double epsilon, int max_iter, double** datapoints_arg, int* initial_centroids_indices) {
 	#undef EPSILON
-	#define EPSILON eps /* the stem of the issue */
+	#define EPSILON epsilon /* the stem of the issue */
 
 	int i;
 	dim = dim_arg;
