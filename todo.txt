@@ -1,3 +1,4 @@
-1. test that the new kmeans.c structure is coherent with the previous one (I.E. test with the HW1 test)
-2. Build a wheel with setup.py (running into some odd though superficial errors)
-3. Matplotlib Bonus question - easy
+1. debug the setup.py log error (says that eps isn't declared - odd)
+2. compile everything
+3. test coherency of the new kmeans.c with the previous kmeans.c version
+4. Matplotlib Bonus question - easy
