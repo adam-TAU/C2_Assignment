@@ -38,7 +38,9 @@ static void converge(int max_iter);
 /* function declarations for supporting the C API */
 static PyObject* fit_capi(PyObject*, PyObject*);
 static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices); /* will most likely have to change that to an extern function */
-
+static PyObject* arrayToList_D(double* array, int length);
+static double* listToArray_D(PyObject *list, int length);
+static int* listToArray_I(PyObject *list, int length);
 
 
 /************************* configuring the C API ****************************************************/
@@ -47,6 +49,9 @@ static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int 
 static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	int K_arg, dim_arg, num_data_arg, max_iter;
 	double eps;
+	double** centroids_c;
+	PyObject *centroids_py;
+	PyObject *result;
 	PyObject *initial_centroids_py;
 	PyObject *datapoints_py;
 
@@ -55,51 +60,110 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	}
 	
 	/* parsing the given lists as arrays */
-	int i, j;
-	PyObject *pypoint, *coord;
+	int i;
 	double** datapoints_arg;
 	int* initial_centroids_indices;
 
-	/* allocating memory for the new arrays */
 	datapoints_arg = (double**)calloc(num_data_arg, sizeof(double*));
 	for (i = 0; i < num_data_arg; i++) {
-		datapoints_arg[i] = (double*)calloc(dim_arg, sizeof(double));
+		datapoints_arg[i] = listToArray_D(PyList_GetItem(datapoints_py, i), dim_arg);
 	}
 	
-	initial_centroids_indices = (int*)calloc(PyList_Size(initial_centroids_py), sizeof(int));
+	initial_centroids_indices = listToArray_I(initial_centroids_py, K_arg);
 
-	/* casting the lists of lists of datapoints into the double** datapoints variable array */
-	for (i = 0; i < PyList_Size(datapoints_py); ++i) {
-		pypoint = PyList_GetItem(datapoints_py, i);
-	        if (!PyList_Check(pypoint)) {
-        		PyErr_SetString(PyExc_TypeError, "must pass in list of list");
-            		return NULL;
-       		}
+	/* building the returned centroids' list */
+	centroids_c = fit_c(K_arg, dim_arg, num_data_arg, eps, max_iter, datapoints_arg, initial_centroids_indices);
+	centroids_py = PyList_New(num_data_arg);
 
-		for(j = 0; j < PyList_Size(pypoint); ++j) {
-			coord = PyList_GetItem(pypoint, j);
-			if (!PyFloat_Check(coord)) {
-				return NULL;
-			}
-			datapoints_arg[i][j] = PyFloat_AsDouble(coord);
+	for(i = 0; i < num_data_arg; i++) {
+		PyList_Append(centroids_py, arrayToList_D(centroids_c[i], dim_arg));
+	}
+
+	result = Py_BuildValue("O", centroids_py);
+
+	/* free-ing the program and returning the centroids */
+	free(centroids_c);
+	free_program();
+	return result;
+}
+
+
+
+static PyObject* arrayToList_D(double* array, int length) {
+	PyObject *list;
+	int i;
+
+	list = PyList_New(length);
+	for (i = 0; i < length; i++) {
+		if(PyList_Append(list, PyFloat_FromDouble(array[i]))) {
+			assert_other(false);
 		}
-
 	}
-	
-	
-	/* casting the list of integers that hold the indices of the observations as centroids */
-	for(i = 0; i < PyList_Size(initial_centroids_py); ++i) {
-		pypoint = PyList_GetItem(initial_centroids_py, i);
-		if (!PyLong_Check(pypoint)) {
-			PyErr_SetString(PyExc_TypeError, "must pass an list of integer");
+
+	return list;
+}
+
+
+
+
+
+static double* listToArray_D(PyObject *list, int length) {
+	int i;
+	double* result;
+	PyObject *pypoint;
+
+	/* first check if the given PyObject is indeed a list */
+	if (!PyList_Check(list)) {
+		PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
+		return NULL;
+	}
+
+	/* casting the list of float to an array of doubles */
+	result = (double*)calloc(length, sizeof(double));
+
+	for(i = 0; i < length; ++i) {
+		pypoint = PyList_GetItem(list, (Py_ssize_t)i);
+		if (!PyFloat_Check(pypoint)) {
+			PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
 			return NULL;
 		}
-		initial_centroids_indices[i] = (int) PyLong_AsLong(pypoint);
+		result[i] = (double) PyFloat_AsDouble(pypoint);
 	}
 
-	/* powering the fit function */
-	return Py_BuildValue("O", fit_c(K_arg, dim_arg, num_data_arg, eps, max_iter, datapoints_arg, initial_centroids_indices));
+	return result;
 }
+
+
+
+
+
+static int* listToArray_I(PyObject *list, int length) {
+	int i;
+	int* result;
+	PyObject *pypoint;
+	
+	/* first check if the given PyObject is indeed a list */
+	if (!PyList_Check(list)) {
+		PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
+		return NULL;
+	}
+
+
+	/* casting the list of integers to an array of integers */
+	result = (int*)calloc(length, sizeof(int));
+
+	for(i = 0; i < length; ++i) {
+		pypoint = PyList_GetItem(list, (Py_ssize_t)i);
+		if (!PyLong_Check(pypoint)) {
+			PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
+			return NULL;
+		}
+		result[i] = (int) PyLong_AsLong(pypoint);
+	}
+
+	return result;
+}
+
 
 
 
@@ -200,7 +264,7 @@ int main(int argc, char **argv) {
  */
 static double** fit_c(int K_arg, int dim_arg, int num_data_arg, double eps, int max_iter, double** datapoints_arg, int* initial_centroids_indices) {
 	#undef EPSILON
-	#define EPSILON eps
+	#define EPSILON eps /* the stem of the issue */
 
 	int i;
 	dim = dim_arg;
