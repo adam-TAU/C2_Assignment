@@ -33,16 +33,16 @@ def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[flo
     weightedly pick the initial centroids for the kmeans process we'll perform later
     """
 	np.random.seed(0)
+    ind_range = list(range(len(datapoints)))
 	centroids = list()
-	centroids[0] = data_point[0]
+	centroids[0] = np.random.randint(0, len(datapoints))
 
 	for i in range(1, K):
-		prev_observation = centroids[i-1]
+		prev_observation = datapoints[centroids[i-1]]
 		distance_list = [calc_distance(dp, prev_observation) for dp in datapoints]
 		sum_of_distances = sum(distance_list)
 		probability_list = [dist/sum_of_distances for dist in distance_list]
-        rand_datapoint_ind = np.random.choice(datapoints, p=probability_list)
-		centroids[i] = datapoints[rand_datapoint_ind]
+        centroids[i] = np.random.choice(ind_range, p=probability_list)
 	
 	return centroids
 
