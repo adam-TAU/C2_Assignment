@@ -18,18 +18,12 @@ typedef struct {
     int count;
 } set_t;
 
-static void assert_input(bool condition);
 static void assert_other(bool condition);
-static void collect_data(const char *filename);
 static void initialize_sets(int*);
-static void get_num_and_dim(FILE *file);
-static void parse_datapoint(FILE *file, dpoint_t *dpoint);
 static void assign_to_closest(dpoint_t dpoint);
 static double sqdist(dpoint_t p1, dpoint_t p2);
 static void add_to_set(set_t *set, dpoint_t dpoint);
 static int update_centroid(set_t *set);
-static void write_output(char *filename);
-static void parse_args(int argc, char **argv, char **infile, char **outfile, int *max_iter);
 static void init_datapoint(dpoint_t *dpoint);
 static void free_datapoint(dpoint_t);
 static void free_program(void);
@@ -206,13 +200,6 @@ PyInit_mykmeanssp(void) {
 
 /*****************************************************************************/
 
-static void assert_input(bool condition) {
-    if(!condition) {
-        puts("Invalid Input!");
-        free_program();
-        exit(1);
-    }
-}
 
 static void assert_other(bool condition) {
     if(!condition) {
@@ -232,33 +219,6 @@ int K = 0;
 set_t *sets = NULL;
 
 /*****************************************************************************/
-
-int main(int argc, char **argv) {
-    char *infile, *outfile;
-    int i, max_iter;
-
-    parse_args(argc, argv, &infile, &outfile, &max_iter);
-    printf("K = %i, max_iter = %i, infile = '%s', outfile = '%s'\n", K,
-           max_iter, infile, outfile);
-
-    collect_data(infile);
-    printf("dim = %i, N = %i\n", dim, num_data);
-
-    int* range_0_to_K_minus_1;
-    range_0_to_K_minus_1 = (int*)calloc(K, sizeof(int));
-
-    for (i = 0; i < K; i++) {
-	    range_0_to_K_minus_1[i] = i;
-    }
-
-    initialize_sets(range_0_to_K_minus_1);
-    free(range_0_to_K_minus_1);
-    converge(max_iter);
-    write_output(outfile);
-
-    free_program();
-    return 0;
-}
 
 
 /* the fit function. uses its given initialized centroids, datapoints and other cruical data
@@ -411,89 +371,6 @@ static void initialize_sets(int* indices) {
 
 
 
-/* Given an input filename, gathers all of the datapoints stored in that file,
- * while also figuring out what `dim` and `num_data` are supposed to be. */
-static void collect_data(const char *filename) {
-    FILE *input;
-    int i;
-
-    input = fopen(filename, "r");
-    assert_input(NULL != input);
-    get_num_and_dim(input);
-
-    datapoints = calloc(num_data, sizeof(*datapoints));
-    assert_other(NULL != datapoints);
-
-    for(i = 0; i < num_data; i++) {
-        parse_datapoint(input, &datapoints[i]);
-    }
-
-    fclose(input);
-}
-
-/* Parses a single datapoint from the given file, assuming that `dim` has
- * already been figured out. */
-static void parse_datapoint(FILE *file, dpoint_t *dpoint) {
-    int i;
-
-    init_datapoint(dpoint);
-
-    for(i = 0; i < dim; i++) {
-        /* The following ',' is okay, because even if it isn't found parsing
-           will be successful. */
-        fscanf(file, "%lf,", &dpoint->data[i]);
-    }
-
-    /* Get rid of extra whitespace. */
-    fscanf(file, "\n");
-}
-
-/* Determines `num_data` and `dim` from the current file by inspecting line
- * structure and amount. */
-static void get_num_and_dim(FILE *file) {
-    int c;
-
-    dim = 1; /* Starting with 1 because the amount of numbers is always 1 more
-                than the amount of commas. */
-    num_data = 0;
-
-    rewind(file);
-    while(EOF != (c = fgetc(file))) {
-        if(c == '\n') {
-            num_data++;
-        } else if(c == ',' && num_data == 0) {
-            dim++;
-        }
-    }
-    rewind(file);
-}
-
-/* Parses the arguments given to the program into K, max_iter, input_file and
- * output_file. */
-static void parse_args(int argc, char **argv, char **infile, char **outfile,
-                       int *max_iter) {
-    int offset;
-
-    /* +1s because the executable filename is an argument too */
-    assert_input(argc == 3 + 1 || argc == 4 + 1);
-
-    K = atoi(argv[1]);
-    assert_input(K > 0);
-
-    if(argc == 3 + 1) {
-        *max_iter = 200;
-
-        offset = 0;
-    } else /* (argc == 4 + 1) */ {
-        *max_iter = atoi(argv[2]);
-        assert_input(*max_iter > 0);
-
-        offset = 1;
-    }
-
-    *infile = argv[2 + offset];
-    *outfile = argv[3 + offset];
-}
 
 /* Initializes a single datapoint - allocates enough space for it and sets all
  * the values to zero. */
@@ -533,21 +410,4 @@ static void free_program() {
     }
 }
 
-/* Writes the centroid data into the file with the given filename. */
-static void write_output(char *filename) {
-    int i, j;
-    FILE *file = fopen(filename, "w");
-
-    for(i = 0; i < K; i++) {
-        for(j = 0; j < dim; j++) {
-            fprintf(file, "%.4f", sets[i].current_centroid.data[j]);
-            if(j < dim - 1) {
-                fputc(',', file);
-            }
-        }
-        fputc('\n', file);
-    }
-
-    fclose(file);
-}
 

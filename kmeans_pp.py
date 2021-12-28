@@ -7,7 +7,7 @@ import mykmeanssp
 
 
 
-def main(K: int, eps: int, maxiter: int, infile1: str, infile2: str) -> None:
+def main(K: int, eps: float, maxiter: int, infile1: str, infile2: str) -> None:
 	# reading from the input files
 	df1 = pd.read_csv(infile1, header=None)
 	df2 = pd.read_csv(infile2, header=None)
@@ -18,7 +18,7 @@ def main(K: int, eps: int, maxiter: int, infile1: str, infile2: str) -> None:
 	observation_centroids_indices = initialize_centroids(K, datapoints)
 
 	# powering the kmeans.c centroid creation module
-	centroids = mykmeanssp.kmeans.fit(K, len(datapoints[0]), len(datapoints), eps, max_iter, datapoints, observation_centroids_indices)
+	centroids = mykmeanssp.fit(K, len(datapoints[0]), len(datapoints), eps, maxiter, datapoints, observation_centroids_indices)
 
 	# output
 	output_string = str()
@@ -38,14 +38,14 @@ def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[flo
 	np.random.seed(0)
 	ind_range = list(range(len(datapoints)))
 	centroids = list()
-	centroids[0] = np.random.randint(0, len(datapoints))
+	centroids.append(np.random.randint(0, len(datapoints)))
 
 	for i in range(1, K):
 		prev_observation = datapoints[centroids[i-1]]
 		distance_list = [calc_distance(dp, prev_observation) for dp in datapoints]
 		sum_of_distances = sum(distance_list)
 		probability_list = [dist/sum_of_distances for dist in distance_list]
-		centroids[i] = np.random.choice(ind_range, p=probability_list)
+		centroids.append(np.random.choice(ind_range, p=probability_list))
 
 	return centroids
 
@@ -95,7 +95,7 @@ def check_positive_numstr(string: str):
 # Argument validation also happens here.
 if __name__ == "__main__":
 	num_args=len(sys.argv)
-	assert_valid_input(num_args in [3+1, 4+1])  # +1 because of script name
+	assert_valid_input(num_args in [4+1, 5+1])  # +1 because of script name
 
 	# We want K to be both numeric and positive.
 	K, valid=check_positive_numstr(sys.argv[1])
@@ -103,16 +103,17 @@ if __name__ == "__main__":
 
 	i=2  # allows for code deduplication later
 	maxiter=300  # default value
-	if num_args == 4+1:  # the max_iter argument is present
+	if num_args == 5+1:  # the max_iter argument is present
 		i=3
 		maxiter, valid=check_positive_numstr(sys.argv[2])
 		assert_valid_input(valid)
 
-	eps=sys.argv[i]
-	infile1=sys.argv[i+1]
-	infile2=sys.argv[i+2]
 
-	# The document specified that filenames must end with .txt, so we verify this here.
+	eps=float(sys.argv[i])
+	infile1=str(sys.argv[i+1])
+	infile2=str(sys.argv[i+2])
+
+	# The document specified that filenames must end with .txt or .csv, so we verify this here.
 	assert_valid_input((infile1.endswith((".txt", ".csv"))) and (infile2.endswith((".txt", ".csv"))))
 
 	main(K, eps, maxiter, infile1, infile2)

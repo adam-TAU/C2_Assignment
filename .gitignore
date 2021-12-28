@@ -12,3 +12,5 @@ test_data/.test.swp
 .kmeansc.swp
 .kme.swp
 build/
+dist/
+mykmeanssp.egg-info/
