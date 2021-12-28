@@ -9,10 +9,10 @@ import mykmeanssp
 
 def main(K: int, eps: int, maxiter: int, infile1: str, infile2: str) -> None:
 	# reading from the input files
-   	df1 = pd.read_csv(infile1, header=None)
-   	df2 = pd.read_csv(infile2, header=None)
-   	joined_df = pd.concat([df1, df2], axis=1, join="inner")
-   	datapoints = joined_df.values.tolist()
+	df1 = pd.read_csv(infile1, header=None)
+	df2 = pd.read_csv(infile2, header=None)
+	joined_df = pd.concat([df1, df2], axis=1, join="inner")
+	datapoints = joined_df.values.tolist()
    	
 	# initializing K centroids from the observations
 	observation_centroids_indices = initialize_centroids(K, datapoints)
@@ -36,7 +36,7 @@ def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[flo
 	weightedly pick the initial centroids for the kmeans process we'll perform later
 	"""
 	np.random.seed(0)
-   	ind_range = list(range(len(datapoints)))
+	ind_range = list(range(len(datapoints)))
 	centroids = list()
 	centroids[0] = np.random.randint(0, len(datapoints))
 
@@ -45,17 +45,17 @@ def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[flo
 		distance_list = [calc_distance(dp, prev_observation) for dp in datapoints]
 		sum_of_distances = sum(distance_list)
 		probability_list = [dist/sum_of_distances for dist in distance_list]
-        	centroids[i] = np.random.choice(ind_range, p=probability_list)
+		centroids[i] = np.random.choice(ind_range, p=probability_list)
 
 	return centroids
 
 
 def calc_distance(u1: List[float], u2: List[float]) -> float:
-    """
-    Given two same length vectors, calculate the euclidean norm of their distance,
-    and return it as the value
-    """
-	assert(len(u1) == len(u2)
+	"""
+	Given two same length vectors, calculate the euclidean norm of their distance,
+	and return it as the value
+	"""
+	assert(len(u1) == len(u2))
 	return sum([(u1[ind] - u2[ind]) ** 2 for ind in range(len(u1))])
 
 
@@ -113,6 +113,6 @@ if __name__ == "__main__":
 	infile2=sys.argv[i+2]
 
 	# The document specified that filenames must end with .txt, so we verify this here.
-	assert_valid_input((infile1.endswith((".txt", ".csv")) and infile2.endswith((".txt", ".csv")))
+	assert_valid_input((infile1.endswith((".txt", ".csv"))) and (infile2.endswith((".txt", ".csv"))))
 
 	main(K, eps, maxiter, infile1, infile2)
