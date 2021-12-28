@@ -45,10 +45,12 @@ static int* listToArray_I(PyObject *list, int length);
 
 /************************* configuring the C API ****************************************************/
 
+static double epsilon;
+
+/******************************************************************************/
 
 static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	int K_arg, dim_arg, num_data_arg, max_iter;
-	double epsilon;
 	double** centroids_c;
 	PyObject *centroids_py;
 	PyObject *result;
@@ -166,7 +168,7 @@ static int* listToArray_I(PyObject *list, int length) {
 
 
 
-
+/**************************************************************************/
 
 
 static PyMethodDef capiMethods[] = {
