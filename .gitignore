@@ -14,3 +14,4 @@ test_data/.test.swp
 build/
 dist/
 mykmeanssp.egg-info/
+mykmeanssp.cpython-39-x86_64-linux-gnu.so

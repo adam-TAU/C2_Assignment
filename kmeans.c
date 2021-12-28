@@ -55,6 +55,7 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 		return NULL;
 	}
 	
+	
 	/* parsing the given lists as arrays */
 	int i;
 	double** datapoints_arg;
@@ -68,6 +69,7 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	initial_centroids_indices = listToArray_I(initial_centroids_py, K_arg);
 
 	/* building the returned centroids' list */
+	/* segmentation fault occurs in the following line (lol) */
 	centroids_c = fit_c(K_arg, dim_arg, num_data_arg, epsilon, max_iter, datapoints_arg, initial_centroids_indices);
 	centroids_py = PyList_New(num_data_arg);
 
