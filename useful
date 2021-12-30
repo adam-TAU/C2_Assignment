@@ -1,0 +1,1 @@
+printf("%d %s", i, Py_TYPE(pypoint)->tp_name);

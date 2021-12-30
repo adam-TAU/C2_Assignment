@@ -1,8 +1,8 @@
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #define EPSILON 0.001
 #define bool int
 #define true 1
@@ -28,6 +28,8 @@ static void init_datapoint(dpoint_t *dpoint);
 static void free_datapoint(dpoint_t);
 static void free_program(void);
 static void converge(int max_iter);
+static void print1D(int* arr, int);
+static void print2D(double** arr, int, int);
 
 /* function declarations for supporting the C API */
 static PyObject* fit_capi(PyObject*, PyObject*);
@@ -47,6 +49,7 @@ static void assert_other(bool condition) {
         exit(1);
     }
 }
+
 
 /*****************************************************************************/
 
@@ -77,13 +80,8 @@ static double** fit_c(double epsilon, int max_iter, double** datapoints_arg, int
 		datapoints[i].data = datapoints_arg[i];
 	}
 
-	
-	/* contaminated */
-	printf("checkpoint 1\n");
 	initialize_sets(initial_centroids_indices);
-	printf("checkpoint 2\n");
 	converge(max_iter);
-	/* contaminated-end */
 	
 	double** centroids_out;
 	centroids_out = (double**)calloc(K, sizeof(double*));
@@ -205,15 +203,11 @@ static void initialize_sets(int* indices) {
            datapoints. */
         init_datapoint(&sets[i].sum);
         init_datapoint(&sets[i].current_centroid);
-		
-		/* contaminated */
-		printf("checkpoint 1\n");
+ 
         /* Copy initial current_centroid from i-th datapoint */
         for(j = 0; j < dim; j++) {
             sets[i].current_centroid.data[j] = datapoints[indices[i]].data[j];
         }
-        printf("checkpoint 2\n");
-        /* contaminated-end */
     }
 }
 
@@ -261,6 +255,28 @@ static void free_program() {
 
 
 
+
+/************************* Generic Functions ***************************/
+
+static void print1D(int* array, int n) {
+	int i;
+	for(i = 0; i < n; i++) {
+		printf("%d,", array[i]);
+	}
+	printf("\n");
+}
+
+
+static void print2D(double** array, int m, int n) {
+	int i, j;
+	for(i = 0; i < m; i++) {
+		for(j = 0; j < n; j++) {
+			printf("%.4f,", array[i][j]);
+		}
+		printf("\n");
+	}
+}
+
 /************************* configuring the C API ****************************************************/
 
 
@@ -268,38 +284,36 @@ static void free_program() {
 
 static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	int max_iter;
-	double** centroids_c;
-	PyObject *centroids_py;
-	PyObject *result;
-	PyObject *initial_centroids_py;
 	PyObject *datapoints_py;
-
-	if(!PyArg_ParseTuple(args, "iiidiO!O!", &K, &dim, &num_data, &epsilon, &max_iter, &PyList_Type, &datapoints_py, &PyList_Type, &initial_centroids_py)) {
+	PyObject *initial_centroids_py;
+	double** datapoints_arg;
+	int* initial_centroids_indices;
+	
+	/* parsing args from Python to C */
+	if(!PyArg_ParseTuple(args, "iiidiOO", &K, &dim, &num_data, &epsilon, &max_iter, &datapoints_py, &initial_centroids_py)) {
 		return NULL;
 	}
-	
+	printf("%d, %d, %d\n", K, num_data, dim);
 	
 	/* parsing the given lists as arrays */
 	int i;
-	double** datapoints_arg;
-	int* initial_centroids_indices;
-
 	datapoints_arg = (double**)calloc(num_data, sizeof(double*));
 	for (i = 0; i < num_data; i++) {
 		datapoints_arg[i] = listToArray_D(PyList_GetItem(datapoints_py, i), dim);
 	}
-	
 	initial_centroids_indices = listToArray_I(initial_centroids_py, K);
 
 	/* building the returned centroids' list */
+	double** centroids_c;
+	PyObject *centroids_py;
+	PyObject *result;
+	
 	/* segmentation fault occurs in the following line (lol) */
 	centroids_c = fit_c(epsilon, max_iter, datapoints_arg, initial_centroids_indices);
 	centroids_py = PyList_New(num_data);
-
 	for(i = 0; i < num_data; i++) {
 		PyList_Append(centroids_py, arrayToList_D(centroids_c[i], dim));
 	}
-
 	result = Py_BuildValue("O", centroids_py);
 
 	/* free-ing the program and returning the centroids */
@@ -310,6 +324,10 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 
 
 
+/***************************** Generic C API Functions ***************************/
+
+
+/* This build a PyList out of an existing array */
 static PyObject* arrayToList_D(double* array, int length) {
 	PyObject *list;
 	int i;
@@ -320,14 +338,13 @@ static PyObject* arrayToList_D(double* array, int length) {
 			assert_other(false);
 		}
 	}
-
 	return list;
 }
 
 
 
 
-
+/* This parses a python Floats' List into a C Double's array */
 static double* listToArray_D(PyObject *list, int length) {
 	int i;
 	double* result;
@@ -341,7 +358,6 @@ static double* listToArray_D(PyObject *list, int length) {
 
 	/* casting the list of float to an array of doubles */
 	result = (double*)calloc(length, sizeof(double));
-
 	for(i = 0; i < length; ++i) {
 		pypoint = PyList_GetItem(list, (Py_ssize_t)i);
 		if (!PyFloat_Check(pypoint)) {
@@ -350,14 +366,13 @@ static double* listToArray_D(PyObject *list, int length) {
 		}
 		result[i] = (double) PyFloat_AsDouble(pypoint);
 	}
-
 	return result;
 }
 
 
 
 
-
+/* This parses a python Integer's List into a C Integer's array */
 static int* listToArray_I(PyObject *list, int length) {
 	int i;
 	int* result;
@@ -369,10 +384,8 @@ static int* listToArray_I(PyObject *list, int length) {
 		return NULL;
 	}
 
-
 	/* casting the list of integers to an array of integers */
 	result = (int*)calloc(length, sizeof(int));
-
 	for(i = 0; i < length; ++i) {
 		pypoint = PyList_GetItem(list, (Py_ssize_t)i);
 		if (!PyLong_Check(pypoint)) {
@@ -381,7 +394,6 @@ static int* listToArray_I(PyObject *list, int length) {
 		}
 		result[i] = (int) PyLong_AsLong(pypoint);
 	}
-
 	return result;
 }
 

@@ -17,6 +17,12 @@ def main(K: int, eps: float, maxiter: int, infile1: str, infile2: str) -> None:
 	# initializing K centroids from the observations
 	observation_centroids_indices = initialize_centroids(K, datapoints)
 
+	# test prints
+	print(observation_centroids_indices)
+	
+	for lst in datapoints:
+		print(lst)
+	
 	# powering the kmeans.c centroid creation module
 	centroids = mykmeanssp.fit(K, len(datapoints[0]), len(datapoints), eps, maxiter, datapoints, observation_centroids_indices)
 
@@ -45,7 +51,7 @@ def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[flo
 		distance_list = [calc_distance(dp, prev_observation) for dp in datapoints]
 		sum_of_distances = sum(distance_list)
 		probability_list = [dist/sum_of_distances for dist in distance_list]
-		centroids.append(np.random.choice(ind_range, p=probability_list))
+		centroids.append(int(np.random.choice(ind_range, p=probability_list)))
 
 	return centroids
 
