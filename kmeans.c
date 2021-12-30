@@ -81,7 +81,7 @@ static double** fit_c(double epsilon, int max_iter, double** datapoints_arg, int
 	/* contaminated */
 	printf("checkpoint 1\n");
 	initialize_sets(initial_centroids_indices);
-	printf("checkpoint 1\n");
+	printf("checkpoint 2\n");
 	converge(max_iter);
 	/* contaminated-end */
 	
