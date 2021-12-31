@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #define EPSILON 0.001
 #define bool int
 #define true 1
@@ -39,6 +40,7 @@ static double** fit_c(int max_iter);
 static PyObject* arrayToList_D(double* array, int length);
 static double* listToArray_D(PyObject *list, int length);
 static int* listToArray_I(PyObject *list, int length);
+static int py_parse_args(PyObject*, int*);
 
 
 /*****************************************************************************/
@@ -320,54 +322,95 @@ static void print2D(double** array, int m, int n) {
 /******************************************************************************/
 
 static PyObject* fit_capi(PyObject *self, PyObject *args) {
-        int max_iter;
-        PyObject *datapoints_py;
-        PyObject *initial_centroids_py;
-
-        /* parsing args from Python to C */
-        if(!PyArg_ParseTuple(args, "iiidiOO", &K, &dim, &num_data, &epsilon, &max_iter, &datapoints_py, &initial_centroids_py)) {
-                return NULL;
-        }
+        int max_iter, i;
+		PyObject *centroids_py;
 
         /* parsing the given lists as arrays */
-        int i;
-        datapoints_arg = (double**)calloc(num_data, sizeof(double*));
-        for (i = 0; i < num_data; i++) {
-                datapoints_arg[i] = listToArray_D(PyList_GetItem(datapoints_py, i), dim);
-        }
-        initial_centroids_indices = listToArray_I(initial_centroids_py, K);
+		if (1 == py_parse_args(args, &max_iter)) goto failed;
 
         /* building the returned centroids' list */
-        PyObject *centroids_py;
         PyObject *result;
         centroids_c = fit_c(max_iter);
         centroids_py = PyList_New(K);
         for(i = 0; i < K; ++i) {
-                PyList_SetItem(centroids_py, i, arrayToList_D(centroids_c[i], dim));
+        		PyObject *tmpList = arrayToList_D(centroids_c[i], dim);
+        		if(NULL == tmpList) goto failed;
+        		
+                if(0 != PyList_SetItem(centroids_py, i, tmpList)) {
+                	Py_DECREF(tmpList);
+                	goto failed;
+              	}
         }
         result = Py_BuildValue("O", centroids_py);
 
         /* free-ing the program and returning the centroids */
         free_program();
         return result;
+        
+        /* Exception Handling, and Reference count handling */
+        failed:
+        Py_DECREF(centroids_py);
+        free_program();
+        return NULL;
 }
 
 
 
 /***************************** Generic C API Functions ***************************/
 
+/* This parses the given Python arguments into C-represented Objects */
+static int py_parse_args(PyObject *args, int *max_iter) {
+    int i;
+    PyObject *datapoints_py;
+    PyObject *initial_centroids_py;
+    
+    
+    /* Fetching Arguments from Python */
+    if(!PyArg_ParseTuple(args, "iiidiOO", &K, &dim, &num_data, &epsilon, max_iter, &datapoints_py, &initial_centroids_py)) {
+		goto failed;
+    }
+    
+    /* Parsing the fetched Arguments into C-represented Objects */
+    datapoints_arg = (double**)calloc(num_data, sizeof(double*));
+    for (i = 0; i < num_data; i++) {
+    		PyObject *tmpItem = PyList_GetItem(datapoints_py, i);
+    		if (NULL == tmpItem) goto failed;
+    		
+    		double *tmpList = listToArray_D(tmpItem, dim);
+    		if (NULL == tmpList) goto failed;
+            datapoints_arg[i] = tmpList;
+    }
+    
+    int *tmpList = listToArray_I(initial_centroids_py, K);
+    if (NULL == tmpList) goto failed;
+    initial_centroids_indices = tmpList;
+   	return 0;
+   	
+   	failed:
+	Py_DECREF(datapoints_py);
+	Py_DECREF(initial_centroids_py);
+	return 1;
+    
+}
+
 
 /* This build a PyList out of an existing array */
 static PyObject* arrayToList_D(double* array, int length) {
-        PyObject *list;
+        PyObject *list, *pyfloat;
         int i;
 
         list = PyList_New(length);
         for (i = 0; i < length; ++i) {
-        		PyObject *pyfloat = PyFloat_FromDouble(array[i]);
-                PyList_SetItem(list, (Py_ssize_t)i, pyfloat);
+        		if(NULL == (pyfloat = PyFloat_FromDouble(array[i]))) {
+        			PyErr_SetString(PyExc_TypeError, "Double to Float conversion failed!");
+        			return NULL;
+        		}
+                if(0 != PyList_SetItem(list, (Py_ssize_t)i, pyfloat)) {
+              		PyErr_SetString(PyExc_IndexError, "Index out of bounds or the index isn't an integer!");
+              		return NULL;
+              	}
         }
-        return Py_BuildValue("O", list);
+        return list;
 }
 
 
@@ -381,7 +424,7 @@ static double* listToArray_D(PyObject *list, int length) {
 
         /* first check if the given PyObject is indeed a list */
         if (!PyList_Check(list)) {
-                PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
+                PyErr_SetString(PyExc_TypeError, "The passed argument isn't a list");
                 return NULL;
         }
 
@@ -390,7 +433,7 @@ static double* listToArray_D(PyObject *list, int length) {
         for(i = 0; i < length; ++i) {
                 pypoint = PyList_GetItem(list, (Py_ssize_t)i);
                 if (!PyFloat_Check(pypoint)) {
-                        PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
+                        PyErr_SetString(PyExc_TypeError, "Must pass an list of floats");
                         return NULL;
                 }
                 result[i] = (double) PyFloat_AsDouble(pypoint);
