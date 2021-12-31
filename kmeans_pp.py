@@ -11,29 +11,22 @@ def main(K: int, eps: float, maxiter: int, infile1: str, infile2: str) -> None:
 	# reading from the input files
 	df1 = pd.read_csv(infile1, header=None)
 	df2 = pd.read_csv(infile2, header=None)
-	joined_df = pd.concat([df1, df2], axis=1, join="inner")
-	datapoints = joined_df.values.tolist()
+	joined = df1.set_index(df1.columns[0]).join(df2.set_index(df2.columns[0]), how='inner', lsuffix='_first', rsuffix='_second')
+	datapoints = joined.values.tolist()
    	
 	# initializing K centroids from the observations
 	observation_centroids_indices = initialize_centroids(K, datapoints)
 
-	# test prints
-	print(observation_centroids_indices)
-	
-	for lst in datapoints:
-		print(lst)
-	
 	# powering the kmeans.c centroid creation module
 	centroids = mykmeanssp.fit(K, len(datapoints[0]), len(datapoints), eps, maxiter, datapoints, observation_centroids_indices)
-
+	
 	# output
 	output_string = str()
-	output_string += ",".join(observation_centroids_indices) + "\n"
-	output_string += [",".join(["{:.4f}".format(num) for num in centroid]) + "\n" for centroid in centroids]
+	output_string += ",".join([str(ele) for ele in observation_centroids_indices]) + "\n"
+	output_string += "\n".join([",".join(["{:.4f}".format(num) for num in centroid]) for centroid in centroids])
 
-	# return
-	return output_string
-
+	# print
+	print(output_string)
 
 
 def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[float]]:

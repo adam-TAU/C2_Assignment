@@ -293,7 +293,6 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	if(!PyArg_ParseTuple(args, "iiidiOO", &K, &dim, &num_data, &epsilon, &max_iter, &datapoints_py, &initial_centroids_py)) {
 		return NULL;
 	}
-	printf("%d, %d, %d\n", K, num_data, dim);
 	
 	/* parsing the given lists as arrays */
 	int i;
@@ -310,9 +309,9 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	
 	/* segmentation fault occurs in the following line (lol) */
 	centroids_c = fit_c(epsilon, max_iter, datapoints_arg, initial_centroids_indices);
-	centroids_py = PyList_New(num_data);
-	for(i = 0; i < num_data; i++) {
-		PyList_Append(centroids_py, arrayToList_D(centroids_c[i], dim));
+	centroids_py = PyList_New(K);
+	for(i = 0; i < K; ++i) {
+		PyList_SetItem(centroids_py, i, arrayToList_D(centroids_c[i], dim));
 	}
 	result = Py_BuildValue("O", centroids_py);
 
@@ -333,12 +332,10 @@ static PyObject* arrayToList_D(double* array, int length) {
 	int i;
 
 	list = PyList_New(length);
-	for (i = 0; i < length; i++) {
-		if(PyList_Append(list, PyFloat_FromDouble(array[i]))) {
-			assert_other(false);
-		}
+	for (i = 0; i < length; ++i) {
+		PyList_SetItem(list, (Py_ssize_t)i, PyFloat_FromDouble(array[i]));
 	}
-	return list;
+	return Py_BuildValue("O", list);
 }
 
 
