@@ -37,7 +37,7 @@ static void print2D(double** arr, int, int);
 
 static PyObject* fit_capi(PyObject*, PyObject*);
 static double** fit_c(int max_iter);
-static PyObject* arrayToList_D(double* array, int length);
+static PyObject* arrayToList_D(const double *const array, int length);
 static double* listToArray_D(PyObject *list, int length);
 static int* listToArray_I(PyObject *list, int length);
 static int py_parse_args(PyObject*, int*);
@@ -342,7 +342,7 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
               	}
         }
         result = Py_BuildValue("O", centroids_py);
-		Py_DECREF(centroids_py);
+		Py_DECREF(result);
 		
         /* free-ing the program and returning the centroids */
         free_program();
@@ -350,7 +350,7 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
         
         /* if any of the CPython functions fail */
         failed:
-        Py_DECREF(centroids_py);
+        Py_DECREF(result);
         free_program();
         return NULL;
 }
@@ -396,7 +396,7 @@ static int py_parse_args(PyObject *args, int *max_iter) {
 
 
 /* This build a PyList out of an existing array */
-static PyObject* arrayToList_D(double* array, int length) {
+static PyObject* arrayToList_D(const double *const array, int length) {
         PyObject *list, *pyfloat;
         int i;
 
