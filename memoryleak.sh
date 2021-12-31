@@ -9,6 +9,7 @@ function process(){
 	wait $1
 	awk '/HEAP SUMMARY:/{found=1} found' /tmp/reporting.txt > "leak_reports/${2}"
 	rm /tmp/reporting.txt
+	echo
 }
 
 

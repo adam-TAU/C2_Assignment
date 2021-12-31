@@ -1,2 +1,2 @@
-1. find stem for malloc_consolidation + track memory leaks
+1. find stem for malloc_consolidation
 2. Matplotlib Bonus question - easy
