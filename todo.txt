@@ -1,4 +1,2 @@
-1. find issue for incorrect index choice
-2. find stem for malloc_consolidation
-3. track memory leaks
-4. Matplotlib Bonus question - easy
+1. find stem for malloc_consolidation + track memory leaks
+2. Matplotlib Bonus question - easy

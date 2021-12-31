@@ -76,18 +76,18 @@ double** centroids_c = NULL;
  * and performs the kmeans algorithm until convergence
  */
 static double** fit_c(int max_iter) {
-	int i;
-	parse_args();
-	converge(max_iter);
-	
-	double** centroids_out;
-	centroids_out = (double**)calloc(K, sizeof(double*));
+        int i;
+        parse_args();
+        converge(max_iter);
 
-	for (i = 0; i < K; i++) {
-		centroids_out[i] = sets[i].current_centroid.data;
-	}
-	
-	return centroids_out;
+        double** centroids_out;
+        centroids_out = (double**)calloc(K, sizeof(double*));
+
+        for (i = 0; i < K; i++) {
+                centroids_out[i] = sets[i].current_centroid.data;
+        }
+
+        return centroids_out;
 }
 
 
@@ -95,17 +95,17 @@ static double** fit_c(int max_iter) {
 /* This function parses the arguments retrieved from Python, into our
 global arguments that serve the k-means algorithm) */
 static void parse_args(void) {
-	/* actual parsing */
-	#undef EPSILON
-	#define EPSILON epsilon
+        /* actual parsing */
+        #undef EPSILON
+        #define EPSILON epsilon
 
-	int i;
-	datapoints = calloc(num_data, sizeof(*datapoints));
-	assert_other(NULL != datapoints);
-	for(i = 0; i < num_data; i++) {
-		datapoints[i].data = datapoints_arg[i];
-	}
-	initialize_sets(initial_centroids_indices);
+        int i;
+        datapoints = calloc(num_data, sizeof(*datapoints));
+        assert_other(NULL != datapoints);
+        for(i = 0; i < num_data; i++) {
+                datapoints[i].data = datapoints_arg[i];
+        }
+        initialize_sets(initial_centroids_indices);
 }
 
 
@@ -113,10 +113,10 @@ static void parse_args(void) {
 
 
 /* This function was created to reduce code duplication. It is the engine of the algorithm,
- * providing the structurization of the clusters until convergence 
+ * providing the structurization of the clusters until convergence
  */
 static void converge(int max_iter) {
-	int iter, i, updated_centroids;
+        int iter, i, updated_centroids;
     for(iter = 0; iter < max_iter; iter++) {
         for(i = 0; i < num_data; i++) {
             assign_to_closest(datapoints[i]);
@@ -219,7 +219,7 @@ static void initialize_sets(int* indices) {
            datapoints. */
         init_datapoint(&sets[i].sum);
         init_datapoint(&sets[i].current_centroid);
- 
+
         /* Copy initial current_centroid from i-th datapoint */
         for(j = 0; j < dim; j++) {
             sets[i].current_centroid.data[j] = datapoints[indices[i]].data[j];
@@ -266,18 +266,18 @@ static void free_program() {
         }
         free(sets);
     }
-    
+
     /* free-ing the Python-given datapoints */
     if(NULL != datapoints_arg) {
-    	/* the actual vectors of the datapoints have been linked
-    	 * directly to datapoints[i].data (line 107, function parse_args()) -> hence why we don't free
-    	 * each vector of datapoints_arg individually */
-        free(datapoints_arg); 
+        /* the actual vectors of the datapoints have been linked
+         * directly to datapoints[i].data (line 107, function parse_args()) -> hence why we don't free
+         * each vector of datapoints_arg individually */
+        free(datapoints_arg);
     }
-    
+
     /* free-ing the Python-given centroids-indices */
     if(NULL != initial_centroids_indices) free(initial_centroids_indices);
-        
+
     /* free-ing the centroids which were used to build values to return to Python */
     if(NULL != centroids_c) {
         /* for(i = 0; i < K; i++) {
@@ -294,22 +294,22 @@ static void free_program() {
 /************************* Generic Functions ***************************/
 
 static void print1D(int* array, int n) {
-	int i;
-	for(i = 0; i < n; i++) {
-		printf("%d,", array[i]);
-	}
-	printf("\n");
+        int i;
+        for(i = 0; i < n; i++) {
+                printf("%d,", array[i]);
+        }
+        printf("\n");
 }
 
 
 static void print2D(double** array, int m, int n) {
-	int i, j;
-	for(i = 0; i < m; i++) {
-		for(j = 0; j < n; j++) {
-			printf("%.4f,", array[i][j]);
-		}
-		printf("\n");
-	}
+        int i, j;
+        for(i = 0; i < m; i++) {
+                for(j = 0; j < n; j++) {
+                        printf("%.4f,", array[i][j]);
+                }
+                printf("\n");
+        }
 }
 
 /************************* configuring the C API ****************************************************/
@@ -318,36 +318,36 @@ static void print2D(double** array, int m, int n) {
 /******************************************************************************/
 
 static PyObject* fit_capi(PyObject *self, PyObject *args) {
-	int max_iter;
-	PyObject *datapoints_py;
-	PyObject *initial_centroids_py;
-	
-	/* parsing args from Python to C */
-	if(!PyArg_ParseTuple(args, "iiidiOO", &K, &dim, &num_data, &epsilon, &max_iter, &datapoints_py, &initial_centroids_py)) {
-		return NULL;
-	}
-	
-	/* parsing the given lists as arrays */
-	int i;
-	datapoints_arg = (double**)calloc(num_data, sizeof(double*));
-	for (i = 0; i < num_data; i++) {
-		datapoints_arg[i] = listToArray_D(PyList_GetItem(datapoints_py, i), dim);
-	}
-	initial_centroids_indices = listToArray_I(initial_centroids_py, K);
+        int max_iter;
+        PyObject *datapoints_py;
+        PyObject *initial_centroids_py;
 
-	/* building the returned centroids' list */
-	PyObject *centroids_py;
-	PyObject *result;
-	centroids_c = fit_c(max_iter);
-	centroids_py = PyList_New(K);
-	for(i = 0; i < K; ++i) {
-		PyList_SetItem(centroids_py, i, arrayToList_D(centroids_c[i], dim));
-	}
-	result = Py_BuildValue("O", centroids_py);
+        /* parsing args from Python to C */
+        if(!PyArg_ParseTuple(args, "iiidiOO", &K, &dim, &num_data, &epsilon, &max_iter, &datapoints_py, &initial_centroids_py)) {
+                return NULL;
+        }
 
-	/* free-ing the program and returning the centroids */
-	free_program();
-	return result;
+        /* parsing the given lists as arrays */
+        int i;
+        datapoints_arg = (double**)calloc(num_data, sizeof(double*));
+        for (i = 0; i < num_data; i++) {
+                datapoints_arg[i] = listToArray_D(PyList_GetItem(datapoints_py, i), dim);
+        }
+        initial_centroids_indices = listToArray_I(initial_centroids_py, K);
+
+        /* building the returned centroids' list */
+        PyObject *centroids_py;
+        PyObject *result;
+        centroids_c = fit_c(max_iter);
+        centroids_py = PyList_New(K);
+        for(i = 0; i < K; ++i) {
+                PyList_SetItem(centroids_py, i, arrayToList_D(centroids_c[i], dim));
+        }
+        result = Py_BuildValue("O", centroids_py);
+
+        /* free-ing the program and returning the centroids */
+        free_program();
+        return result;
 }
 
 
@@ -357,14 +357,14 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 
 /* This build a PyList out of an existing array */
 static PyObject* arrayToList_D(double* array, int length) {
-	PyObject *list;
-	int i;
+        PyObject *list;
+        int i;
 
-	list = PyList_New(length);
-	for (i = 0; i < length; ++i) {
-		PyList_SetItem(list, (Py_ssize_t)i, PyFloat_FromDouble(array[i]));
-	}
-	return Py_BuildValue("O", list);
+        list = PyList_New(length);
+        for (i = 0; i < length; ++i) {
+                PyList_SetItem(list, (Py_ssize_t)i, PyFloat_FromDouble(array[i]));
+        }
+        return Py_BuildValue("O", list);
 }
 
 
@@ -372,27 +372,27 @@ static PyObject* arrayToList_D(double* array, int length) {
 
 /* This parses a python Floats' List into a C Double's array */
 static double* listToArray_D(PyObject *list, int length) {
-	int i;
-	double* result;
-	PyObject *pypoint;
+        int i;
+        double* result;
+        PyObject *pypoint;
 
-	/* first check if the given PyObject is indeed a list */
-	if (!PyList_Check(list)) {
-		PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
-		return NULL;
-	}
+        /* first check if the given PyObject is indeed a list */
+        if (!PyList_Check(list)) {
+                PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
+                return NULL;
+        }
 
-	/* casting the list of float to an array of doubles */
-	result = (double*)calloc(length, sizeof(double));
-	for(i = 0; i < length; ++i) {
-		pypoint = PyList_GetItem(list, (Py_ssize_t)i);
-		if (!PyFloat_Check(pypoint)) {
-			PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
-			return NULL;
-		}
-		result[i] = (double) PyFloat_AsDouble(pypoint);
-	}
-	return result;
+        /* casting the list of float to an array of doubles */
+        result = (double*)calloc(length, sizeof(double));
+        for(i = 0; i < length; ++i) {
+                pypoint = PyList_GetItem(list, (Py_ssize_t)i);
+                if (!PyFloat_Check(pypoint)) {
+                        PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
+                        return NULL;
+                }
+                result[i] = (double) PyFloat_AsDouble(pypoint);
+        }
+        return result;
 }
 
 
@@ -400,27 +400,27 @@ static double* listToArray_D(PyObject *list, int length) {
 
 /* This parses a python Integer's List into a C Integer's array */
 static int* listToArray_I(PyObject *list, int length) {
-	int i;
-	int* result;
-	PyObject *pypoint;
-	
-	/* first check if the given PyObject is indeed a list */
-	if (!PyList_Check(list)) {
-		PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
-		return NULL;
-	}
+        int i;
+        int* result;
+        PyObject *pypoint;
 
-	/* casting the list of integers to an array of integers */
-	result = (int*)calloc(length, sizeof(int));
-	for(i = 0; i < length; ++i) {
-		pypoint = PyList_GetItem(list, (Py_ssize_t)i);
-		if (!PyLong_Check(pypoint)) {
-			PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
-			return NULL;
-		}
-		result[i] = (int) PyLong_AsLong(pypoint);
-	}
-	return result;
+        /* first check if the given PyObject is indeed a list */
+        if (!PyList_Check(list)) {
+                PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
+                return NULL;
+        }
+
+        /* casting the list of integers to an array of integers */
+        result = (int*)calloc(length, sizeof(int));
+        for(i = 0; i < length; ++i) {
+                pypoint = PyList_GetItem(list, (Py_ssize_t)i);
+                if (!PyLong_Check(pypoint)) {
+                        PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
+                        return NULL;
+                }
+                result[i] = (int) PyLong_AsLong(pypoint);
+        }
+        return result;
 }
 
 
@@ -429,38 +429,33 @@ static int* listToArray_I(PyObject *list, int length) {
 
 
 static PyMethodDef capiMethods[] = {
-	{"fit",
-		(PyCFunction) fit_capi,
-		METH_VARARGS,
-		PyDoc_STR("A fit method for the kmeans algorithm")
-	},
-	{NULL, NULL, 0, NULL}
+        {"fit",
+                (PyCFunction) fit_capi,
+                METH_VARARGS,
+                PyDoc_STR("A fit method for the kmeans algorithm")
+        },
+        {NULL, NULL, 0, NULL}
 };
 
 
 
 
 static struct PyModuleDef moduledef = {
-	PyModuleDef_HEAD_INIT,
-	"mykmeanssp",
-	NULL,
-	-1,
-	capiMethods
+        PyModuleDef_HEAD_INIT,
+        "mykmeanssp",
+        NULL,
+        -1,
+        capiMethods
 };
 
 
 
 PyMODINIT_FUNC
 PyInit_mykmeanssp(void) {
-	PyObject *m;
-	m = PyModule_Create(&moduledef);
-	if (!m) {
-		return NULL;
-	}
-	return m;
+        PyObject *m;
+        m = PyModule_Create(&moduledef);
+        if (!m) {
+                return NULL;
+        }
+        return m;
 }
-
-
-
-
-

@@ -12,7 +12,7 @@ def main(K: int, eps: float, maxiter: int, infile1: str, infile2: str) -> None:
 	df1 = pd.read_csv(infile1, header=None)
 	df2 = pd.read_csv(infile2, header=None)
 	joined = df1.set_index(df1.columns[0]).join(df2.set_index(df2.columns[0]), how='inner', lsuffix='_first', rsuffix='_second')
-	datapoints = joined.values.tolist()
+	datapoints = joined.sort_index().values.tolist()
    	
 	# initializing K centroids from the observations
 	observation_centroids_indices = initialize_centroids(K, datapoints)
