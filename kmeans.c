@@ -342,12 +342,13 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
               	}
         }
         result = Py_BuildValue("O", centroids_py);
-
+		Py_DECREF(centroids_py);
+		
         /* free-ing the program and returning the centroids */
         free_program();
         return result;
         
-        /* Exception Handling, and Reference count handling */
+        /* if any of the CPython functions fail */
         failed:
         Py_DECREF(centroids_py);
         free_program();
@@ -363,7 +364,6 @@ static int py_parse_args(PyObject *args, int *max_iter) {
     int i;
     PyObject *datapoints_py;
     PyObject *initial_centroids_py;
-    
     
     /* Fetching Arguments from Python */
     if(!PyArg_ParseTuple(args, "iiidiOO", &K, &dim, &num_data, &epsilon, max_iter, &datapoints_py, &initial_centroids_py)) {
@@ -386,6 +386,7 @@ static int py_parse_args(PyObject *args, int *max_iter) {
     initial_centroids_indices = tmpList;
    	return 0;
    	
+   	/* if any of the CPython functions fail */
    	failed:
 	Py_DECREF(datapoints_py);
 	Py_DECREF(initial_centroids_py);
