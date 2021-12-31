@@ -14,3 +14,4 @@ test_data/.test.swp
 build/
 dist/
 mykmeanssp.egg-info/
+valgrind-python.supp

@@ -280,9 +280,11 @@ static void free_program() {
 
     /* free-ing the centroids which were used to build values to return to Python */
     if(NULL != centroids_c) {
-        /* for(i = 0; i < K; i++) {
-            free(centroids_c[i]);
-        } */
+        for(i = 0; i < K; i++) {
+        	/*
+        	if (NULL != centroids_c[i]) free(centroids_c[i]);
+        	*/
+        } 
         free(centroids_c);
     }
 }
@@ -362,7 +364,8 @@ static PyObject* arrayToList_D(double* array, int length) {
 
         list = PyList_New(length);
         for (i = 0; i < length; ++i) {
-                PyList_SetItem(list, (Py_ssize_t)i, PyFloat_FromDouble(array[i]));
+        		PyObject *pyfloat = PyFloat_FromDouble(array[i]);
+                PyList_SetItem(list, (Py_ssize_t)i, pyfloat);
         }
         return Py_BuildValue("O", list);
 }
