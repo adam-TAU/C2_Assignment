@@ -338,8 +338,6 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	/* building the returned centroids' list */
 	PyObject *centroids_py;
 	PyObject *result;
-	
-	/* segmentation fault occurs in the following line (lol) */
 	centroids_c = fit_c(max_iter);
 	centroids_py = PyList_New(K);
 	for(i = 0; i < K; ++i) {
