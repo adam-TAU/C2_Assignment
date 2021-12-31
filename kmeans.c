@@ -28,13 +28,14 @@ static void init_datapoint(dpoint_t *dpoint);
 static void free_datapoint(dpoint_t);
 static void free_program(void);
 static void converge(int max_iter);
-static void parse_args();
+static void parse_args(void);
 static void print1D(int* arr, int);
 static void print2D(double** arr, int, int);
 
-/* function declarations for supporting the C API */
+
+
 static PyObject* fit_capi(PyObject*, PyObject*);
-static double** fit_c(int max_iter); /* will most likely have to change that to an extern function */
+static double** fit_c(int max_iter);
 static PyObject* arrayToList_D(double* array, int length);
 static double* listToArray_D(PyObject *list, int length);
 static int* listToArray_I(PyObject *list, int length);
@@ -75,27 +76,25 @@ double** centroids_c = NULL;
  * and performs the kmeans algorithm until convergence
  */
 static double** fit_c(int max_iter) {
-	int i; 
+	int i;
 	parse_args();
-
-	/* perform the algorithm <max_iter> times */
 	converge(max_iter);
 	
-	/* return the value */
 	double** centroids_out;
 	centroids_out = (double**)calloc(K, sizeof(double*));
+
 	for (i = 0; i < K; i++) {
 		centroids_out[i] = sets[i].current_centroid.data;
 	}
+	
 	return centroids_out;
 }
 
 
 
-
 /* This function parses the arguments retrieved from Python, into our
 global arguments that serve the k-means algorithm) */
-static void parse_args() {
+static void parse_args(void) {
 	/* actual parsing */
 	#undef EPSILON
 	#define EPSILON epsilon
@@ -108,6 +107,8 @@ static void parse_args() {
 	}
 	initialize_sets(initial_centroids_indices);
 }
+
+
 
 
 
@@ -238,10 +239,6 @@ static void init_datapoint(dpoint_t *dpoint) {
     assert_other(NULL != dpoint->data);
 }
 
-
-/************************* MEMORY MANAGEMENT ******************************/
-
-
 /* Frees the given datapoint. If it's already been freed or not yet allocated,
  * this function safely does nothing. */
 static void free_datapoint(dpoint_t dpoint) {
@@ -254,8 +251,7 @@ static void free_datapoint(dpoint_t dpoint) {
  * hasn't been allocated yet, this function does not attempt to free it. */
 static void free_program() {
     int i;
-	
-	/* free-ing datapoints */
+
     if(NULL != datapoints) {
         for(i = 0; i < num_data; i++) {
             free_datapoint(datapoints[i]);
@@ -263,7 +259,6 @@ static void free_program() {
         free(datapoints);
     }
 
-	/* free-ing the sets of the algorithm */
     if(NULL != sets) {
         for(i = 0; i < K; i++) {
             free_datapoint(sets[i].current_centroid);
@@ -279,16 +274,15 @@ static void free_program() {
     	 * each vector of datapoints_arg individually */
         free(datapoints_arg); 
     }
-	printf("over here\n");
     
     /* free-ing the Python-given centroids-indices */
     if(NULL != initial_centroids_indices) free(initial_centroids_indices);
         
     /* free-ing the centroids which were used to build values to return to Python */
     if(NULL != centroids_c) {
-        for(i = 0; i < K; i++) {
+        /* for(i = 0; i < K; i++) {
             free(centroids_c[i]);
-        }
+        } */
         free(centroids_c);
     }
 }
@@ -318,11 +312,11 @@ static void print2D(double** array, int m, int n) {
 	}
 }
 
-/************************* CONFIGURING THE C API ****************************************************/
+/************************* configuring the C API ****************************************************/
 
-/* This function is a wrapper that we expose to Python, in which
-Python can power through the extension we create in order
-use the K-means algorithm implemented in C */
+
+/******************************************************************************/
+
 static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	int max_iter;
 	PyObject *datapoints_py;
@@ -344,10 +338,9 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 	/* building the returned centroids' list */
 	PyObject *centroids_py;
 	PyObject *result;
+	
+	/* segmentation fault occurs in the following line (lol) */
 	centroids_c = fit_c(max_iter);
-	/* feel free to use the functions print1D (for integer arrays)
-	 * and print2D (for double 2D arrays) to print mid-program the values,
-	 * for instance, right here it would be appropriate to use: print2D(centroids_c, K, dim); */
 	centroids_py = PyList_New(K);
 	for(i = 0; i < K; ++i) {
 		PyList_SetItem(centroids_py, i, arrayToList_D(centroids_c[i], dim));
@@ -387,7 +380,6 @@ static double* listToArray_D(PyObject *list, int length) {
 
 	/* first check if the given PyObject is indeed a list */
 	if (!PyList_Check(list)) {
-		free_program();
 		PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
 		return NULL;
 	}
@@ -397,7 +389,6 @@ static double* listToArray_D(PyObject *list, int length) {
 	for(i = 0; i < length; ++i) {
 		pypoint = PyList_GetItem(list, (Py_ssize_t)i);
 		if (!PyFloat_Check(pypoint)) {
-			free_program();
 			PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
 			return NULL;
 		}
@@ -417,7 +408,6 @@ static int* listToArray_I(PyObject *list, int length) {
 	
 	/* first check if the given PyObject is indeed a list */
 	if (!PyList_Check(list)) {
-		free_program();
 		PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
 		return NULL;
 	}
@@ -427,7 +417,6 @@ static int* listToArray_I(PyObject *list, int length) {
 	for(i = 0; i < length; ++i) {
 		pypoint = PyList_GetItem(list, (Py_ssize_t)i);
 		if (!PyLong_Check(pypoint)) {
-			free_program();
 			PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
 			return NULL;
 		}
@@ -438,7 +427,7 @@ static int* listToArray_I(PyObject *list, int length) {
 
 
 
-/************************* Exposing the C API as a Module ********************************/
+/**************************************************************************/
 
 
 static PyMethodDef capiMethods[] = {

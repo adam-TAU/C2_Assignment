@@ -37,13 +37,12 @@ def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[flo
 	np.random.seed(0)
 	ind_range = list(range(len(datapoints)))
 	centroids = list()
-	centroids.append(np.random.randint(0, len(datapoints)))
+	centroids.append(int(np.random.choice(ind_range)))
 
 	for i in range(1, K):
-		prev_observation = datapoints[centroids[i-1]]
-		distance_list = [calc_distance(dp, prev_observation) for dp in datapoints]
-		sum_of_distances = sum(distance_list)
-		probability_list = [dist/sum_of_distances for dist in distance_list]
+		distance_list = [min([calc_distance(dp, datapoints[prev_obs]) for prev_obs in centroids]) for dp in datapoints]
+		sum_dist = sum(distance_list)
+		probability_list = [dist/sum_dist for dist in distance_list]
 		centroids.append(int(np.random.choice(ind_range, p=probability_list)))
 
 	return centroids

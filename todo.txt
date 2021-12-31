@@ -1,4 +1,4 @@
-1. debug the setup.py log error (says that eps isn't declared - odd)
-2. compile everything
-3. test coherency of the new kmeans.c with the previous kmeans.c version
+1. find issue for incorrect index choice
+2. find stem for malloc_consolidation
+3. track memory leaks
 4. Matplotlib Bonus question - easy
