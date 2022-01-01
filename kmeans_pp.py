@@ -17,6 +17,9 @@ def main(K: int, eps: float, maxiter: int, infile1: str, infile2: str) -> None:
 	# initializing K centroids from the observations
 	observation_centroids_indices = initialize_centroids(K, datapoints)
 
+	# We want K to be less or equal to N
+	assert_valid_input(K<=len(datapoints));
+
 	# powering the kmeans.c centroid creation module
 	centroids = mykmeanssp.fit(K, len(datapoints[0]), len(datapoints), eps, maxiter, datapoints, observation_centroids_indices)
 	

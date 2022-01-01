@@ -30,9 +30,6 @@ static void free_datapoint(dpoint_t);
 static void free_program(void);
 static void converge(int max_iter);
 static void parse_args(void);
-static void print1D(int* arr, int);
-static void print2D(double** arr, int, int);
-
 
 
 static PyObject* fit_capi(PyObject*, PyObject*);
@@ -84,6 +81,7 @@ static double** fit_c(int max_iter) {
 
         double** centroids_out;
         centroids_out = (double**)calloc(K, sizeof(double*));
+        assert_other(NULL != centroids_out);
 
         for (i = 0; i < K; i++) {
                 centroids_out[i] = sets[i].current_centroid.data;
@@ -280,41 +278,13 @@ static void free_program() {
     /* free-ing the Python-given centroids-indices */
     if(NULL != initial_centroids_indices) free(initial_centroids_indices);
 
-    /* free-ing the centroids which were used to build values to return to Python */
-    if(NULL != centroids_c) {
-        for(i = 0; i < K; i++) {
-        	/*
-        	if (NULL != centroids_c[i]) free(centroids_c[i]);
-        	*/
-        } 
+    /* free-ing the centroids which were used to build values to return to Python
+     * We've already free-d each particular centroid with in the free_datapoint(sets[i].current_centroid) */
+    if(NULL != centroids_c) { 
         free(centroids_c);
     }
 }
 
-
-
-
-
-/************************* Generic Functions ***************************/
-
-static void print1D(int* array, int n) {
-        int i;
-        for(i = 0; i < n; i++) {
-                printf("%d,", array[i]);
-        }
-        printf("\n");
-}
-
-
-static void print2D(double** array, int m, int n) {
-        int i, j;
-        for(i = 0; i < m; i++) {
-                for(j = 0; j < n; j++) {
-                        printf("%.4f,", array[i][j]);
-                }
-                printf("\n");
-        }
-}
 
 /************************* configuring the C API ****************************************************/
 
@@ -324,22 +294,22 @@ static void print2D(double** array, int m, int n) {
 static PyObject* fit_capi(PyObject *self, PyObject *args) {
         int max_iter, i;
 		PyObject *centroids_py;
-
-        /* parsing the given lists as arrays */
-		if (1 == py_parse_args(args, &max_iter)) goto failed;
+		PyObject *result;
+		
+        /* parsing the given lists as arrays (If an error has been captured
+         * a PyExc has been set, and we return NULL */
+		if (1 == py_parse_args(args, &max_iter)) return NULL;
 
         /* building the returned centroids' list */
-        PyObject *result;
         centroids_c = fit_c(max_iter);
         centroids_py = PyList_New(K);
         for(i = 0; i < K; ++i) {
         		PyObject *tmpList = arrayToList_D(centroids_c[i], dim);
         		if(NULL == tmpList) goto failed;
         		
-                if(0 != PyList_SetItem(centroids_py, i, tmpList)) {
-                	Py_DECREF(tmpList);
-                	goto failed;
-              	}
+        		/* Heads up! PyList_SetItem steals a reference, so Py_DECREF(centroids_py) 
+        		 * would Py_DECREF(tmpList) to 0 */
+                if(0 != PyList_SetItem(centroids_py, i, tmpList)) goto failed;
         }
         result = Py_BuildValue("O", centroids_py);
 		Py_DECREF(result);
@@ -348,9 +318,10 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
         free_program();
         return result;
         
-        /* if any of the CPython functions fail */
+        
         failed:
-        Py_DECREF(result);
+        /* if parsing args went corretly tho we got an error */
+        Py_DECREF(centroids_py);
         free_program();
         return NULL;
 }
@@ -359,7 +330,8 @@ static PyObject* fit_capi(PyObject *self, PyObject *args) {
 
 /***************************** Generic C API Functions ***************************/
 
-/* This parses the given Python arguments into C-represented Objects */
+/* This parses the given Python arguments into C-represented Objects + manage Reference counts of Py args 
+ * Returns 0 on success, and 1 on failure */
 static int py_parse_args(PyObject *args, int *max_iter) {
     int i;
     PyObject *datapoints_py;
@@ -367,35 +339,46 @@ static int py_parse_args(PyObject *args, int *max_iter) {
     
     /* Fetching Arguments from Python */
     if(!PyArg_ParseTuple(args, "iiidiOO", &K, &dim, &num_data, &epsilon, max_iter, &datapoints_py, &initial_centroids_py)) {
-		goto failed;
+		return 1;
     }
     
     /* Parsing the fetched Arguments into C-represented Objects */
     datapoints_arg = (double**)calloc(num_data, sizeof(double*));
+    assert_other(NULL != datapoints_arg);
+    
     for (i = 0; i < num_data; i++) {
+    		/* PyList_GetItem returns a borrowed reference - no need to Py_DECREF */
     		PyObject *tmpItem = PyList_GetItem(datapoints_py, i);
     		if (NULL == tmpItem) goto failed;
     		
-    		double *tmpList = listToArray_D(tmpItem, dim);
-    		if (NULL == tmpList) goto failed;
-            datapoints_arg[i] = tmpList;
+    		double *tmpArray = listToArray_D(tmpItem, dim);
+    		if (NULL == (datapoints_arg[i] = tmpArray)) goto failed;
     }
     
-    int *tmpList = listToArray_I(initial_centroids_py, K);
-    if (NULL == tmpList) goto failed;
-    initial_centroids_indices = tmpList;
+    int *tmpArray = listToArray_I(initial_centroids_py, K);
+    if (NULL == (initial_centroids_indices = tmpArray)) goto failed;
+    Py_DECREF(datapoints_py);
    	return 0;
    	
-   	/* if any of the CPython functions fail */
+   	
    	failed:
+   	/* if any of the CPython functions fail:
+   	 * An error of py_parse_args doesn't trigger the free_program, 
+   	 * since the program hasn't advanced enough, therefore we free datapoints_arg here */
+   	if (datapoints_arg != NULL) {
+		for (i = 0; i < num_data; i++) {
+			if (datapoints_arg[i] != NULL) free(datapoints_arg[i]);
+		}
+		free(datapoints_arg);
+	}
 	Py_DECREF(datapoints_py);
-	Py_DECREF(initial_centroids_py);
 	return 1;
     
 }
 
 
-/* This build a PyList out of an existing array */
+/* This builds a PyList out of an existing array
+ * No need to care about reference counts - it's managed by fit_capi */
 static PyObject* arrayToList_D(const double *const array, int length) {
         PyObject *list, *pyfloat;
         int i;
@@ -417,7 +400,8 @@ static PyObject* arrayToList_D(const double *const array, int length) {
 
 
 
-/* This parses a python Floats' List into a C Double's array */
+/* This parses a python Floats' List into a C Double's array
+ * No need to worry about reference counts, it's managed by py_parse_args() */
 static double* listToArray_D(PyObject *list, int length) {
         int i;
         double* result;
@@ -431,21 +415,31 @@ static double* listToArray_D(PyObject *list, int length) {
 
         /* casting the list of float to an array of doubles */
         result = (double*)calloc(length, sizeof(double));
+        assert_other(NULL != result); 
+        
         for(i = 0; i < length; ++i) {
+        		/* PyList_GetItem returns a borrowed reference - no need to Py_DECREF */
                 pypoint = PyList_GetItem(list, (Py_ssize_t)i);
                 if (!PyFloat_Check(pypoint)) {
                         PyErr_SetString(PyExc_TypeError, "Must pass an list of floats");
-                        return NULL;
+                        goto failed;
                 }
                 result[i] = (double) PyFloat_AsDouble(pypoint);
         }
         return result;
+        
+        
+        failed:
+        /* If any of the CPython functions fail */
+        if (result != NULL) free(result);
+        return NULL;
 }
 
 
 
 
-/* This parses a python Integer's List into a C Integer's array */
+/* This parses a python Integer's List into a C Integer's array
+ * No need to worry about reference counts, it's managed by py_parse_args() */
 static int* listToArray_I(PyObject *list, int length) {
         int i;
         int* result;
@@ -453,21 +447,29 @@ static int* listToArray_I(PyObject *list, int length) {
 
         /* first check if the given PyObject is indeed a list */
         if (!PyList_Check(list)) {
-                PyErr_SetString(PyExc_TypeError, "the passed argument isn't a list");
+                PyErr_SetString(PyExc_TypeError, "The passed argument isn't a list!");
                 return NULL;
         }
 
         /* casting the list of integers to an array of integers */
         result = (int*)calloc(length, sizeof(int));
+        assert_other(NULL != result);
+        
         for(i = 0; i < length; ++i) {
+        		/* PyList_GetItem returns a borrowed reference - no need to Py_DECREF */
                 pypoint = PyList_GetItem(list, (Py_ssize_t)i);
                 if (!PyLong_Check(pypoint)) {
-                        PyErr_SetString(PyExc_TypeError, "must pass an list of floats");
-                        return NULL;
+                        PyErr_SetString(PyExc_TypeError, "Must pass an list of floats!");
+                        goto failed;
                 }
                 result[i] = (int) PyLong_AsLong(pypoint);
         }
         return result;
+        
+        failed:
+        /* If any of the CPython functions fail */
+        if (result != NULL) free(result);
+        return NULL;
 }
 
 
