@@ -15,14 +15,14 @@ def run() -> None:
 	K-means clusterization.
 	"""
 	# loading the needed data
-	k_vals = np.arange(1,11)
+	k_vals = np.arange(2,11)
 	iris_data = load_iris().data
 	prev: list
 	circle: plt.Circle
 	
 	# iterating over the different K values - the number of clusters/centroids
 	for ind, k in enumerate(k_vals):
-		curr = [k, KMeans(n_clusters = k,  init = 'k-means++').fit(iris_data).inertia_ / len(iris_data)]
+		curr = [k, KMeans(n_clusters = k,  init = 'k-means++', random_state=0).fit(iris_data).inertia_ / len(iris_data)]
 		if ind != 0:
 			plt.plot([prev[0], curr[0]], [prev[1], curr[1]], color="blue")
 		prev = curr
