@@ -2,7 +2,6 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Circle, FancyArrowPatch
 from sklearn.datasets import load_iris
 from sklearn.cluster import KMeans
-from typing import List
 import numpy as np
 
 
