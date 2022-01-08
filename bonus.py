@@ -11,13 +11,25 @@ def run() -> None:
 	The main function of the file. This function gets powered
 	when the file is ran as whole. No Arguments Accepted, and nothing is returned.
 	At the end of the running of the function, a file named elbow.png will be saved
-	within the directory that the file was placed at, showing the optimal K for the 
+	within the directory that the file was placed at, showing the optimal K for the
 	K-means clusterization.
+
+	IMPORTANT:
+	For some reason, only on the University's servers (nova (and beast)),
+	the model KMeans that is imported from sklearn.cluster,
+	doesn't accept the value `1` inside its `n_clusters` argument,
+	But on our local Linux Machines at home, it does.
+	Therefore, we've "planted" the inertia returned with n_clusters=1
+	with the value that it got on our local, at-home Linux Machines
+
+	Note:
+	We've normalized the values of inertia (by dividing them all with
+	the number of observations), that is to make things clearer.
 	"""
 	# loading the needed data
 	k_vals = np.arange(2,11)
 	iris_data = load_iris().data
-	prev: list
+	prev = [1, 4.542470666666664]
 	circle: plt.Circle
 	
 	# iterating over the different K values - the number of clusters/centroids
