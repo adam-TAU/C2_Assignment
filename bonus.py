@@ -50,7 +50,7 @@ def run() -> None:
 			
 	
 	# pyplot manipulations to find and annotate the elbow
-	plt.title("Elbow Method for Selection fo optimal \"K\" clusters")
+	plt.title("Elbow Method for Selection of optimal \"K\" clusters")
 	plt.ylabel("Average Dispresion")
 	plt.xlabel("------> K")
 	plt.locator_params(axis='x', nbins=10)

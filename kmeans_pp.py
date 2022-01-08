@@ -9,8 +9,11 @@ import mykmeanssp
 
 def main(K: int, eps: float, maxiter: int, infile1: str, infile2: str) -> None:
 	# reading from the input files
-	df1 = pd.read_csv(infile1, header=None)
-	df2 = pd.read_csv(infile2, header=None)
+	try:
+		df1 = pd.read_csv(infile1, header=None)
+		df2 = pd.read_csv(infile2, header=None)
+	except FileNotFoundError:
+		assert_valid_input(False)
 	joined = df1.set_index(df1.columns[0]).join(df2.set_index(df2.columns[0]), how='inner', lsuffix='_first', rsuffix='_second')
 	datapoints = joined.sort_index().values.tolist()
    	
@@ -18,7 +21,7 @@ def main(K: int, eps: float, maxiter: int, infile1: str, infile2: str) -> None:
 	observation_centroids_indices = initialize_centroids(K, datapoints)
 
 	# We want K to be less or equal to N
-	assert_valid_input(K<=len(datapoints));
+	assert_valid_input(K<=len(datapoints))
 
 	# powering the kmeans.c centroid creation module
 	centroids = mykmeanssp.fit(K, len(datapoints[0]), len(datapoints), eps, maxiter, datapoints, observation_centroids_indices)
@@ -109,10 +112,13 @@ if __name__ == "__main__":
 		maxiter, valid=check_positive_numstr(sys.argv[2])
 		assert_valid_input(valid)
 
-
-	eps=float(sys.argv[i])
-	infile1=str(sys.argv[i+1])
-	infile2=str(sys.argv[i+2])
+	try:
+		eps=float(sys.argv[i])
+	except ValueError:
+		assert_valid_input(False)
+	assert_valid_input(eps >= 0)
+	infile1=sys.argv[i+1]
+	infile2=sys.argv[i+2]
 
 	# The document specified that filenames must end with .txt or .csv, so we verify this here.
 	assert_valid_input((infile1.endswith((".txt", ".csv"))) and (infile2.endswith((".txt", ".csv"))))
