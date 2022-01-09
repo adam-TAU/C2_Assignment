@@ -31,8 +31,8 @@ def main(K: int, eps: float, maxiter: int, infile1: str, infile2: str) -> None:
 	output_string += ",".join([str(ele) for ele in observation_centroids_indices]) + "\n"
 	output_string += "\n".join([",".join(["{:.4f}".format(num) for num in centroid]) for centroid in centroids])
 
-	# print
-	print(output_string)
+	# print + newline
+	print(output_string + "\n")
 
 
 def initialize_centroids(K: int, datapoints: List[List[float]]) -> List[List[float]]:
