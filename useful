@@ -1,6 +1,0 @@
-printf("%d %s", i, Py_TYPE(pypoint)->tp_name);
-
-
-https://stackoverflow.com/questions/57143041/memory-leak-in-c-extension-for-python#:~:text=2-,The%20leak%20comes%20from,-%3A
-https://unix.stackexchange.com/questions/36450/how-can-i-find-a-memory-leak-of-a-running-process#:~:text=Here%20are%20the%20steps%20that%20almost%20guarantee%20to%20find%20what%20is%20leaking%20memory%3A
-https://stackoverflow.com/questions/3982036/how-can-i-use-valgrind-with-python-c-extensions#:~:text=How%20can%20I%20use%20valgrind%20with%20Python%20C%2B%2B%20extensions%3F
